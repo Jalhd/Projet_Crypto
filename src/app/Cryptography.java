@@ -2,6 +2,7 @@ package app;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -12,11 +13,20 @@ import java.security.Key;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
+import java.security.spec.KeySpec;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Scanner;
+
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.Mac;
 import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
+import javax.crypto.spec.SecretKeySpec;
 
 
 public class Cryptography {
@@ -45,6 +55,8 @@ public class Cryptography {
 				this.cipher(password,fm.getFileNameList().get(k));		
 				k++;
 			}
+	
+			this.HMAC("mac", fm.filesToListOfBytes("ciphered"));	    
 			fm.zipDirectory("ciphered",outputFile);
 		}
 		else if(cipherMode == Cipher.DECRYPT_MODE){
@@ -185,13 +197,24 @@ public class Cryptography {
 		baos.write(xor(blockCipheredTwoTimes,output.toByteArray()),0,lastBlockLength);
 	}
 	
-	public void HMAC(String filepath) {
+	public void HMAC(String filepath,ArrayList<byte[]> data) throws FileNotFoundException, IOException {
 		Path path = Paths.get(filepath);	
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		//On récupère tous les fichiers dans un gros byte Array pour en faire le HMAC
+		for(byte[] byteArray : data ) {
+			baos.write(byteArray);
+		}
+		byte[] dataToSign = baos.toByteArray();
 		try {
-			MessageDigest md = MessageDigest.getInstance("SHA-256");
-			byte[] data = Files.readAllBytes(path);
-		} catch (IOException | NoSuchAlgorithmException e) {
-			// TODO Auto-generated catch block
+			KeyManager km = new KeyManager();	
+			Key hmacKey = km.hmacGen(this.key);
+			Mac mac = Mac.getInstance("HmacSHA256");
+			mac.init(hmacKey);
+			byte[] signature = mac.doFinal(dataToSign);
+		    try (FileOutputStream stream = new FileOutputStream("ciphered"+File.separator+"mac.txt")) {
+			      stream.write(signature);
+			}
+		} catch (NoSuchAlgorithmException | InvalidKeyException e) {
 			e.printStackTrace();
 		}
 	}
@@ -203,7 +226,7 @@ public class Cryptography {
 		}
 		return result;
 	}
-		
+
 	public static void main(String[] args) throws IllegalBlockSizeException, BadPaddingException, IOException {
 		CommandParser cp = new CommandParser(args);
 		Cryptography c = new Cryptography();

@@ -1,6 +1,8 @@
 package app;
 
+import java.io.File;
 import java.text.ParseException;
+import java.util.Scanner;
 
 import javax.crypto.Cipher;
 
@@ -55,14 +57,30 @@ public class CommandParser {
 		       }else if(cmd.hasOption("dec")) {
 		    	   cipherMode = Cipher.DECRYPT_MODE;
 		       }
+		       this.checkOutputFile(this.output);
 		   	       
 	       } catch (org.apache.commons.cli.ParseException e) {
 	           System.out.println(e.getMessage());
 	           formatter.printHelp("utility-name", options);
-
 	           System.exit(1);
 	       }
 	       
 	}
+	
+	//Check if file exists
+	private void checkOutputFile(String path) {
+        File outputFile = new File(path);
+        boolean exists = outputFile.exists();
+        if (exists) {
+            System.out.println("Output already exists, do you want to overwrite the file : " + path + " ? Y/n");
+            Scanner input = new Scanner(System.in);
+            String answer = input.nextLine();
+            if (answer.equals("") || answer.equals("y") || answer.equals("Y")) {
+            } else {
+                System.exit(1);
+            }
+        }
+    }
+		
 	
 }
